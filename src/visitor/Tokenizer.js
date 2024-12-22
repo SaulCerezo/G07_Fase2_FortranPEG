@@ -8,6 +8,20 @@ module tokenizer
 implicit none
 
 contains
+
+function toLower(str) result(lowerStr)
+    character(len=*), intent(in) :: str
+    character(len=len(str)) :: lowerStr
+    integer :: i
+
+    lowerStr = str
+    do i = 1, len(str)
+        if (iachar(str(i:i)) >= iachar('A') .and. iachar(str(i:i)) <= iachar('Z')) then
+            lowerStr(i:i) = char(iachar(str(i:i)) + 32)
+        end if
+    end do
+end function toLower
+
 function nextSym(input, cursor) result(lexeme)
     character(len=*), intent(in) :: input
     integer, intent(inout) :: cursor
@@ -58,17 +72,25 @@ end module tokenizer
         }
     }
     visitString(node) {
-        //aqui dentro hacemos la traduccion a fortran 
-        return `
-        if ("${node.val}" == input(cursor:cursor + ${
-            node.val.length - 1
-        })) then !Foo
-            allocate( character(len=${node.val.length}) :: lexeme)
-            lexeme = input(cursor:cursor + ${node.val.length - 1})
-            cursor = cursor + ${node.val.length}
-            return
-        end if
-        `
+        const lowerCaseComparison = node.isCase 
+            ? `
+            if (toLower(input(cursor:cursor + ${node.val.length - 1})) == "${node.val.toLowerCase()}") then ! Foo
+                allocate( character(len=${node.val.length}) :: lexeme)
+                lexeme = input(cursor:cursor + ${node.val.length - 1})
+                cursor = cursor + ${node.val.length}
+                return
+            end if
+            ` 
+            : `
+            if ("${node.val}" == input(cursor:cursor + ${node.val.length - 1})) then ! Foo
+                allocate( character(len=${node.val.length}) :: lexeme)
+                lexeme = input(cursor:cursor + ${node.val.length - 1})
+                cursor = cursor + ${node.val.length}
+                return
+            end if
+            `;
+    
+        return lowerCaseComparison;
     }
     generateCaracteres(chars) {
         if (chars.length === 0) return '';
