@@ -38,7 +38,24 @@ end module tokenizer
         return node.exprs.map(node => node.accept(this)).join('\n');
     }
     visitExpresion(node) {
-        return node.expr.accept(this);
+        const baseExpr = node.expr.accept(this);
+        const label = node.label ? `! Etiqueta: ${node.label}\n` : '';
+        const qty = node.qty || '';
+    
+        switch (qty) {
+            case '*': // Cero o más veces
+    return `
+    ${label}
+    i = cursor
+    do while (cursor <= len(input))
+        ${baseExpr}
+        if (cursor == i) exit ! Rompe si no hay avance
+        i = cursor
+    end do
+    `;
+        default: 
+        return `${label}${baseExpr}`;
+        }
     }
     visitString(node) {
         //aqui dentro hacemos la traduccion a fortran 
@@ -72,11 +89,16 @@ end module tokenizer
     }
     visitRango(node) {
         return `
-    if (input(i:i) >= "${node.bottom}" .and. input(i:i) <= "${node.top}") then
-        lexeme = input(cursor:i)
-        cursor = i + 1
+    i = cursor
+    do while (i <= len(input) .and. input(i:i) >= "${node.bottom}" .and. input(i:i) <= "${node.top}")
+        i = i + 1
+    end do
+    if (i > cursor) then
+        allocate( character(len=i-cursor) :: lexeme )
+        lexeme = input(cursor:i-1)
+        cursor = i
         return
     end if
-        `;
-    }
+    `;
+}
 }

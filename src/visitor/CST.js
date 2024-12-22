@@ -86,3 +86,25 @@ export class Rango extends Node {
     }
 }
     
+export class Id extends Node {
+    constructor(id) {
+        super();
+        this.id = id;
+    }
+
+    accept(visitor) {
+        return visitor.visitId(this);
+    }
+}
+    
+export class Parentesis extends Node {
+    constructor(expr) {
+        super();
+        this.expr = expr;
+    }
+
+    accept(visitor) {
+        return visitor.visitParentesis(this);
+    }
+}
+    
