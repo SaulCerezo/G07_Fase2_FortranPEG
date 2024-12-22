@@ -53,11 +53,15 @@ varios = ("!"/"$"/"@"/"&")
 expresiones
   = id:identificador {
     usos.push(id)
+    return new n.Id(id);
   }
   / val:$literales isCase:"i"? {
     return new n.String(val.replace(/['"]/g, ''), isCase);
   }
-  / "(" _ opciones _ ")"
+  / "(" _ expr:opciones _ ")"{
+    return new n.Parentesis(expr);
+  }
+  
   / chars:clase isCase:"i"? {
     return new n.Clase(chars, isCase);
   }
