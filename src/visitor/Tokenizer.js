@@ -4,10 +4,22 @@ import { Rango } from './CST.js';
 export default class Tokenizer extends Visitor {
     generateTokenizer(grammar) {
         return `
-module tokenizer
-implicit none
+module parser
+    implicit none
 
 contains
+
+subroutine parse(input)
+    character(len=*), intent(in) :: input
+    integer :: cursor
+    character(len=:), allocatable :: lexeme
+    
+    cursor = 1
+    do while (lexeme /= "EOF" .and. lexeme /= "ERROR")
+        lexeme = nextSym(input, cursor)
+        print *, lexeme
+    end do
+end subroutine parse
 
 function toLower(str) result(lowerStr)
     character(len=*), intent(in) :: str
@@ -39,7 +51,7 @@ function nextSym(input, cursor) result(lexeme)
     print *, "error lexico en col ", cursor, ', "'//input(cursor:cursor)//'"'
     lexeme = "ERROR"
 end function nextSym
-end module tokenizer 
+end module parser
         `;
     }
     visitProducciones(node) {
@@ -50,6 +62,19 @@ end module tokenizer
     }
     visitUnion(node) {
         return node.exprs.map(node => node.accept(this)).join('\n');
+    }
+    visitId(node) {
+        return `
+        if (toLower(input(cursor:)) == "${node.id.toLowerCase()}") then
+            allocate( character(len=len("${node.id}")) :: lexeme )
+            lexeme = "${node.id}"
+            cursor = cursor + len("${node.id}")
+            return
+        end if
+        `;
+    }
+    visitParentesis(node) {
+        return node.expr.accept(this);
     }
     visitExpresion(node) {
         const baseExpr = node.expr.accept(this);
@@ -66,6 +91,20 @@ end module tokenizer
         if (cursor == i) exit ! Rompe si no hay avance
         i = cursor
     end do
+    `;
+    //Operador +, una o mas veces
+            case '+':
+                return `
+    ${label}
+    i = cursor
+    ${baseExpr} 
+    if (cursor > i) then
+    do while (cursor <= len(input))
+        i = cursor
+        ${baseExpr}
+        if (cursor == i) exit 
+    end do
+    end if
     `;
         default: 
         return `${label}${baseExpr}`;
@@ -95,7 +134,7 @@ end module tokenizer
     generateCaracteres(chars) {
         if (chars.length === 0) return '';
         return `
-    if (findloc([${chars.map((char) => `"${char}"`).join(', ')}], input(i:i), 1) > 0) then
+    if (findloc([${chars.map((char) => "${char}").join(', ')}], input(i:i), 1) > 0) then
         lexeme = input(cursor:i)
         cursor = i + 1
         return
