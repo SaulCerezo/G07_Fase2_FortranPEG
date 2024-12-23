@@ -4,10 +4,22 @@ import { Rango } from './CST.js';
 export default class Tokenizer extends Visitor {
     generateTokenizer(grammar) {
         return `
-module tokenizer
-implicit none
+module parser
+    implicit none
 
 contains
+
+subroutine parse(input)
+    character(len=*), intent(in) :: input
+    integer :: cursor
+    character(len=:), allocatable :: lexeme
+    
+    cursor = 1
+    do while (lexeme /= "EOF" .and. lexeme /= "ERROR")
+        lexeme = nextSym(input, cursor)
+        print *, lexeme
+    end do
+end subroutine parse
 
 function toLower(str) result(lowerStr)
     character(len=*), intent(in) :: str
@@ -39,26 +51,39 @@ function nextSym(input, cursor) result(lexeme)
     print *, "error lexico en col ", cursor, ', "'//input(cursor:cursor)//'"'
     lexeme = "ERROR"
 end function nextSym
-end module tokenizer 
+end module parser
         `;
     }
     visitProducciones(node) {
         return node.expr.accept(this);
     }
     visitOpciones(node) {
-        return node.exprs.map((node) => node.accept(this)).join('\n');
+        return node.exprs.map(node => node.accept(this)).join('\n');
     }
     visitUnion(node) {
-        return node.exprs.map((node) => node.accept(this)).join('\n');
+        return node.exprs.map(node => node.accept(this)).join('\n');
+    }
+    visitId(node) {
+        return `
+        if (toLower(input(cursor:)) == "${node.id.toLowerCase()}") then
+            allocate( character(len=len("${node.id}")) :: lexeme )
+            lexeme = "${node.id}"
+            cursor = cursor + len("${node.id}")
+            return
+        end if
+        `;
+    }
+    visitParentesis(node) {
+        return node.expr.accept(this);
     }
     visitExpresion(node) {
         const baseExpr = node.expr.accept(this);
         const label = node.label ? `! Etiqueta: ${node.label}\n` : '';
         const qty = node.qty || '';
-
+    
         switch (qty) {
             case '*': // Cero o más veces
-                return `
+    return `
     ${label}
     i = cursor
     do while (cursor <= len(input))
@@ -67,57 +92,49 @@ end module tokenizer
         i = cursor
     end do
     `;
-
-            //Operador +, una o mas veces
+    //Operador +, una o mas veces
             case '+':
                 return `
     ${label}
     i = cursor
     ${baseExpr} 
     if (cursor > i) then
-        do while (cursor <= len(input))
-            i = cursor
-            ${baseExpr}
-            if (cursor == i) exit 
-        end do
+    do while (cursor <= len(input))
+        i = cursor
+        ${baseExpr}
+        if (cursor == i) exit 
+    end do
     end if
     `;
-
-            default:
-                return `${label}${baseExpr}`;
+        default: 
+        return `${label}${baseExpr}`;
         }
     }
     visitString(node) {
-        const lowerCaseComparison = node.isCase
+        const lowerCaseComparison = node.isCase 
             ? `
-            if (toLower(input(cursor:cursor + ${
-                node.val.length - 1
-            })) == "${node.val.toLowerCase()}") then ! Foo
+            if (toLower(input(cursor:cursor + ${node.val.length - 1})) == "${node.val.toLowerCase()}") then ! Foo
                 allocate( character(len=${node.val.length}) :: lexeme)
                 lexeme = input(cursor:cursor + ${node.val.length - 1})
                 cursor = cursor + ${node.val.length}
                 return
             end if
-            `
+            ` 
             : `
-            if ("${node.val}" == input(cursor:cursor + ${
-                  node.val.length - 1
-              })) then ! Foo
+            if ("${node.val}" == input(cursor:cursor + ${node.val.length - 1})) then ! Foo
                 allocate( character(len=${node.val.length}) :: lexeme)
                 lexeme = input(cursor:cursor + ${node.val.length - 1})
                 cursor = cursor + ${node.val.length}
                 return
             end if
             `;
-
+    
         return lowerCaseComparison;
     }
     generateCaracteres(chars) {
         if (chars.length === 0) return '';
         return `
-    if (findloc([${chars
-        .map((char) => `"${char}"`)
-        .join(', ')}], input(i:i), 1) > 0) then
+    if (findloc([${chars.map((char) => "${char}").join(', ')}], input(i:i), 1) > 0) then
         lexeme = input(cursor:i)
         cursor = i + 1
         return
@@ -127,13 +144,8 @@ end module tokenizer
     visitClase(node) {
         return `
     i = cursor
-    ${this.generateCaracteres(
-        node.chars.filter((node) => typeof node === 'string')
-    )}
-    ${node.chars
-        .filter((node) => node instanceof Rango)
-        .map((range) => range.accept(this))
-        .join('\n')}
+    ${this.generateCaracteres(node.chars.filter((node) => typeof node === 'string'))}
+    ${node.chars.filter((node) => node instanceof Rango).map((range) => range.accept(this)).join('\n')}
         `;
     }
     visitRango(node) {
@@ -149,5 +161,5 @@ end module tokenizer
         return
     end if
     `;
-    }
+}
 }
