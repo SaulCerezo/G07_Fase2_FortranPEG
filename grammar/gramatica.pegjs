@@ -32,12 +32,12 @@ producciones
   }
 
 opciones
-  = expr:union rest:(_ "/" _ union)* {
+  = expr:union rest:(_ "/" _ @union)* {
     return new n.Opciones([expr, ...rest]);
   }
 
 union
-  = expr:expresion rest:(_ expresion !(_ literales? _ "=") )* {
+  = expr:expresion rest:(_ @expresion !(_ literales? _ "=") )* {
     return new n.Union([expr, ...rest]);
   }
 
@@ -83,7 +83,7 @@ conteo = "|" _ (numero / id:identificador) _ "|"
 
 // Regla principal que analiza corchetes con contenido
 clase
-    = "[" contenido+ "]"
+    = "[" @contenido+ "]"
 
 contenido
     = bottom:$[^\[\]] "-" top:$[^\[\]]{
@@ -92,8 +92,8 @@ contenido
   / $[^\[\]]
 
 literales
-  = '"' stringDobleComilla* '"'
-  / "'" stringSimpleComilla* "'"
+  = '"' @stringDobleComilla* '"'
+  / "'" @stringSimpleComilla* "'"
 
 stringDobleComilla = !('"' / "\\" / finLinea) .
                     / "\\" escape

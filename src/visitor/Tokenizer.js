@@ -92,20 +92,6 @@ end module parser
         i = cursor
     end do
     `;
-    //Operador +, una o mas veces
-            case '+':
-                return `
-    ${label}
-    i = cursor
-    ${baseExpr} 
-    if (cursor > i) then
-    do while (cursor <= len(input))
-        i = cursor
-        ${baseExpr}
-        if (cursor == i) exit 
-    end do
-    end if
-    `;
         default: 
         return `${label}${baseExpr}`;
         }
@@ -134,7 +120,7 @@ end module parser
     generateCaracteres(chars) {
         if (chars.length === 0) return '';
         return `
-    if (findloc([${chars.map((char) => "${char}").join(', ')}], input(i:i), 1) > 0) then
+    if (findloc([${chars.map((char) => `"${char}"`).join(', ')}], input(i:i), 1) > 0) then
         lexeme = input(cursor:i)
         cursor = i + 1
         return
