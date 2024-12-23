@@ -62,3 +62,49 @@ export class String extends Node {
     }
 }
     
+export class Clase extends Node {
+    constructor(chars, isCase) {
+        super();
+        this.chars = chars;
+		this.isCase = isCase;
+    }
+
+    accept(visitor) {
+        return visitor.visitClase(this);
+    }
+}
+    
+export class Rango extends Node {
+    constructor(bottom, top) {
+        super();
+        this.bottom = bottom;
+		this.top = top;
+    }
+
+    accept(visitor) {
+        return visitor.visitRango(this);
+    }
+}
+    
+export class Id extends Node {
+    constructor(id) {
+        super();
+        this.id = id;
+    }
+
+    accept(visitor) {
+        return visitor.visitId(this);
+    }
+}
+    
+export class Parentesis extends Node {
+    constructor(expr) {
+        super();
+        this.expr = expr;
+    }
+
+    accept(visitor) {
+        return visitor.visitParentesis(this);
+    }
+}
+    

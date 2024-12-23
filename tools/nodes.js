@@ -4,6 +4,10 @@ const nodes = {
     Union: ['exprs'],
     Expresion: ['expr', 'label', 'qty'],
     String: ['val', 'isCase'],
+    Clase: ['chars', 'isCase'],
+    Rango: ['bottom', 'top'],
+    Id: ['id'],
+    Parentesis: ['expr'],
 };
 
 export default nodes;
